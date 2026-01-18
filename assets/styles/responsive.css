@@ -1,0 +1,116 @@
+/* =================== SIDEBAR RESPONSIVE =================== */
+#sidebar {
+  transform: translateX(0);
+  transition: transform 0.3s ease-in-out;
+}
+
+#sidebar-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 30;
+  transition: opacity 0.3s ease-in-out;
+}
+
+@media (max-width: 1024px) {
+  #main-content {
+    margin-left: 0;
+  }
+
+  #sidebar {
+    transform: translateX(-100%);
+  }
+
+  #sidebar-overlay.show {
+    display: block;
+  }
+}
+
+/* =================== LOADING OVERLAY =================== */
+.loading {
+  display: flex;
+  opacity: 1;
+  transition: opacity 0.5s ease-in-out;
+}
+
+.loading.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* =================== ANIMATIONS =================== */
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.recipe-card,
+.product-card,
+.category-card {
+  animation: slideIn 0.3s ease-out;
+}
+
+/* =================== NUTRI SCORE COLORS =================== */
+.nutri-score-a { background-color: #22c55e; }
+.nutri-score-b { background-color: #84cc16; }
+.nutri-score-c { background-color: #eab308; }
+.nutri-score-d { background-color: #f97316; }
+.nutri-score-e { background-color: #ef4444; }
+
+/* =================== PROGRESS BARS =================== */
+.progress-bar {
+  transition: width 0.3s ease-in-out;
+}
+
+/* =================== RESPONSIVE GRID =================== */
+@media (max-width: 1280px) {
+  #recipes-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1024px) {
+  #recipes-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  #categories-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  #recipes-grid {
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+  }
+
+  #categories-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .px-8 {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+}
+
+/* =================== SCROLL BEHAVIOR =================== */
+html {
+  scroll-behavior: smooth;
+}
+
+/* =================== ACCESSIBILITY =================== */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

@@ -1,0 +1,116 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --primary-color: #10b981;
+  --secondary-color: #14b8a6;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+}
+
+/* Sidebar styles */
+.sidebar-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 30;
+  display: none;
+}
+
+#sidebar {
+  transition: transform 0.3s ease;
+  transform: translateX(0);
+}
+
+/* Loading overlay */
+.loading {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.5s ease;
+}
+
+/* Animations */
+@keyframes bounce-custom {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.animate-bounce {
+  animation: bounce-custom 1s infinite;
+}
+
+/* Utilities */
+.line-clamp-1 {
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Gradient utility */
+.bg-linear-to-br {
+  background: linear-gradient(135deg, var(--tw-gradient-stops));
+}
+
+.bg-linear-to-r {
+  background: linear-gradient(90deg, var(--tw-gradient-stops));
+}
+
+.bg-linear-to-t {
+  background: linear-gradient(180deg, var(--tw-gradient-stops));
+}
+
+/* Transitions */
+.transition-all {
+  transition: all 0.3s ease;
+}
+
+/* Focus states */
+input:focus {
+  outline: none;
+}
+
+button {
+  cursor: pointer;
+  font-family: inherit;
+}
+
+
+
+/* Scrollbar styles */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
