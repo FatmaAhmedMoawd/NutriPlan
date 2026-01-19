@@ -836,6 +836,16 @@ async function searchProductByBarcode() {
 /**
  * Render product category buttons
  */
+/**
+ * Render product category buttons with gradient backgrounds and icons
+ * 
+ * All styling is in CSS (assets/styles/style.css) for:
+ * - Button layout and sizing
+ * - Gradient backgrounds via inline styles
+ * - Hover and active states
+ * - Mobile horizontal scrolling
+ * - Font Awesome icon display
+ */
 function renderProductCategories(categories) {
   const container = document.getElementById("product-categories");
   if (!container) return;
@@ -843,26 +853,110 @@ function renderProductCategories(categories) {
   container.innerHTML = "";
   
   if (!categories || categories.length === 0) {
-    container.innerHTML = "<p class='text-gray-500'>No categories available</p>";
+    container.innerHTML = "<p style='color: #6b7280;'>No categories available</p>";
     return;
   }
   
-  // Render first 10 categories (most popular ones)
+  // Category icon and color mapping with CSS gradient values
+  // Using emoji as fallback if Font Awesome fails to load
+  const categoryStyles = {
+    breakfast_cereals: { icon: "fa-wheat-awn", emoji: "🌾", gradient: "linear-gradient(to right, #f59e0b, #f97316)" },
+    beverages: { icon: "fa-bottle-water", emoji: "💧", gradient: "linear-gradient(to right, #3b82f6, #06b6d4)" },
+    snacks: { icon: "fa-cookie", emoji: "🍪", gradient: "linear-gradient(to right, #a855f7, #ec4899)" },
+    dairy: { icon: "fa-cheese", emoji: "🧀", gradient: "linear-gradient(to right, #0ea5e9, #3b82f6)" },
+    fruits: { icon: "fa-apple-whole", emoji: "🍎", gradient: "linear-gradient(to right, #ef4444, #f43f5e)" },
+    vegetables: { icon: "fa-carrot", emoji: "🥕", gradient: "linear-gradient(to right, #22c55e, #10b981)" },
+    breads: { icon: "fa-bread-slice", emoji: "🍞", gradient: "linear-gradient(to right, #b45309, #eab308)" },
+    meats: { icon: "fa-drumstick-bite", emoji: "🍗", gradient: "linear-gradient(to right, #dc2626, #be185d)" },
+    frozen_foods: { icon: "fa-snowflake", emoji: "❄️", gradient: "linear-gradient(to right, #06b6d4, #1e40af)" },
+    sauces: { icon: "fa-jar", emoji: "🫙", gradient: "linear-gradient(to right, #f97316, #ef4444)" }
+  };
+  
+  // Render first 10 categories
   categories.slice(0, 10).forEach(category => {
     const btn = document.createElement("button");
-    btn.className = `product-category-btn px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium whitespace-nowrap hover:bg-emerald-100 hover:text-emerald-700 transition-all`;
-    btn.textContent = category.name;
+    const style = categoryStyles[category.id] || { 
+      icon: "fa-box", 
+      emoji: "📦",
+      gradient: "linear-gradient(to right, #6b7280, #4b5563)" 
+    };
+    
+    // Apply CSS class for all styling
+    btn.className = "product-category-btn";
+    
+    // Apply gradient via inline style - use important to override any CSS
+    btn.style.background = style.gradient;
+    btn.style.backgroundImage = "none"; // Prevent image backgrounds
+    btn.style.backgroundClip = "border-box";
+    
+    // Create button content with icon and text
+    // Try Font Awesome first, with emoji as fallback
+    btn.innerHTML = `<i class="fa-solid ${style.icon}" aria-hidden="true"></i><span>${category.name}</span>`;
+    
     btn.dataset.categoryId = category.id;
+    
     btn.addEventListener("click", () => {
       filterProductsByCategory(category.id, category.name);
     });
+    
     container.appendChild(btn);
   });
+  
+  // Refresh Font Awesome icons after DOM update
+  if (window.FontAwesome && window.FontAwesome.config) {
+    window.FontAwesome.config.autoReplaceSvg = 'nest';
+  }
+  
+  // Try multiple methods to ensure Font Awesome processes the new elements
+  try {
+    if (window.FontAwesome && window.FontAwesome.dom) {
+      window.FontAwesome.dom.i2svg({ node: container });
+    }
+  } catch (e) {
+    console.log('Font Awesome i2svg failed, trying alternative');
+  }
+  
+  // Fallback: check if icons rendered correctly after delay
+  setTimeout(() => {
+    const icons = container.querySelectorAll('i.fa-solid');
+    let anyIconsFailed = false;
+    
+    icons.forEach(icon => {
+      // Check if icon has SVG child or proper font rendering
+      const hasSVG = icon.querySelector('svg');
+      const hasContent = icon.textContent && icon.textContent.length > 0;
+      
+      if (!hasSVG && !hasContent) {
+        anyIconsFailed = true;
+      }
+    });
+    
+    // If icons failed to render, replace all with emoji
+    if (anyIconsFailed) {
+      const categoryStyles = {
+        breakfast_cereals: "🌾",
+        beverages: "💧",
+        snacks: "🍪",
+        dairy: "🧀",
+        fruits: "🍎",
+        vegetables: "🥕",
+        breads: "🍞",
+        meats: "🍗",
+        frozen_foods: "❄️",
+        sauces: "🫙"
+      };
+      
+      container.querySelectorAll('.product-category-btn').forEach(btn => {
+        const categoryId = btn.dataset.categoryId;
+        const emoji = categoryStyles[categoryId] || "📦";
+        const text = btn.querySelector('span:last-child')?.textContent || "";
+        
+        btn.innerHTML = `<span style="font-size: 18px; display: inline-block; margin-right: 4px; line-height: 1;">${emoji}</span><span>${text}</span>`;
+      });
+    }
+  }, 1000);
 }
 
-/**
- * Filter products by selected category
- */
 async function filterProductsByCategory(categoryId, categoryName = "") {
   if (!categoryId) return;
   
@@ -871,14 +965,12 @@ async function filterProductsByCategory(categoryId, categoryName = "") {
   try {
     currentProductCategory = categoryId;
     
-    // Update active button state
+    // Update active button state - use CSS class instead of inline styles
     document.querySelectorAll(".product-category-btn").forEach(btn => {
-      btn.classList.remove("bg-emerald-600", "text-white");
-      btn.classList.add("bg-gray-100", "text-gray-700");
+      btn.classList.remove("active");
       
       if (btn.dataset.categoryId === categoryId) {
-        btn.classList.remove("bg-gray-100", "text-gray-700");
-        btn.classList.add("bg-emerald-600", "text-white");
+        btn.classList.add("active");
       }
     });
     

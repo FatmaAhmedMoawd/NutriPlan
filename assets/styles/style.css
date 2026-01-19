@@ -1,3 +1,149 @@
 .loading {
-  display:none
+  display: none;
+}
+
+/* ===== Font Awesome Compatibility Fix ===== */
+/* Override Font Awesome CSS to ensure proper display in our buttons */
+.product-category-btn .fa-solid,
+.product-category-btn i.fa-solid {
+  font-family: 'Font Awesome 7 Free' !important;
+  font-weight: 900 !important;
+  font-style: normal !important;
+  font-variant: normal !important;
+  text-rendering: auto !important;
+  -webkit-font-smoothing: antialiased !important;
+  -moz-osx-font-smoothing: grayscale !important;
+  display: inline-block !important;
+  color: white !important;
+  font-size: 16px !important;
+  vertical-align: middle !important;
+  margin-right: 4px !important;
+}
+
+/* ===== Product Category Buttons Styling ===== */
+.product-category-btn {
+  /* Base button styles */
+  padding: 12px 20px;
+  border: none;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  color: white !important;
+  cursor: pointer;
+  
+  /* Flexbox for icon and text alignment */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  
+  /* Transitions for smooth effects */
+  transition: all 0.2s ease;
+  
+  /* Remove default button styling */
+  outline: none;
+  font-family: inherit;
+  
+  /* Important: Gradient backgrounds applied via inline styles */
+  background: linear-gradient(to right, #6b7280, #4b5563) !important;
+  background-clip: border-box !important;
+  background-attachment: fixed !important;
+  
+  /* Ensure white text */
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+/* Remove any background images or patterns */
+.product-category-btn::before,
+.product-category-btn::after {
+  background: none !important;
+}
+
+/* Hover effect - shadow + lift */
+.product-category-btn:hover {
+  box-shadow: 0 10px 15px rgba(0, 0, 0, 0.2);
+  transform: translateY(-2px);
+  filter: brightness(1.1);
+}
+
+/* Active state - white ring + shadow */
+.product-category-btn.active {
+  box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.6), 0 8px 16px rgba(0, 0, 0, 0.25);
+  transform: translateY(-2px);
+}
+
+/* Focus state for accessibility */
+.product-category-btn:focus {
+  outline: 2px solid rgba(255, 255, 255, 0.7);
+  outline-offset: 2px;
+}
+
+/* Icon styling inside the button - ensure visibility */
+.product-category-btn i {
+  font-size: 16px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: auto !important;
+  height: auto !important;
+  line-height: 1 !important;
+  vertical-align: middle !important;
+  text-align: center !important;
+  color: white !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  flex-shrink: 0 !important;
+}
+
+/* Ensure SVG icons from Font Awesome are visible */
+.product-category-btn .svg-inline--fa {
+  display: inline-block !important;
+  vertical-align: middle !important;
+  width: 1em !important;
+  height: 1em !important;
+  fill: white !important;
+  color: white !important;
+  margin-right: 4px !important;
+}
+
+/* Text styling inside the button */
+.product-category-btn span {
+  display: inline-block;
+  line-height: 1.4;
+  vertical-align: middle;
+  color: white !important;
+  font-weight: 600;
+}
+
+/* Container for category buttons - horizontal scroll on mobile */
+#product-categories {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 12px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+  margin: 0 -16px;
+  padding-left: 16px;
+  padding-right: 16px;
+}
+
+/* Scrollbar styling */
+#product-categories::-webkit-scrollbar {
+  height: 4px;
+}
+
+#product-categories::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 2px;
+}
+
+#product-categories::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 2px;
+}
+
+#product-categories::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
 }
