@@ -469,3 +469,103 @@ export async function getNutrition(foodName) {
   console.warn("[API] Nutrition lookup found nothing for:", foodName);
   return { nutrition: null, error: "Nutrition data not found" };
 }
+
+/**
+ * Get all product categories
+ * 
+ * Returns: { categories: [...], error: null }
+ */
+export async function getProductCategories() {
+  const res = await fetchSafe(`${BASE_URL}/products/categories`);
+  
+  if (res.success && res.data?.results?.length) {
+    return { categories: res.data.results, error: null };
+  }
+  
+  console.error("[API] Failed to fetch product categories");
+  return { categories: [], error: "Unable to load product categories" };
+}
+
+/**
+ * Get products by category with pagination
+ * 
+ * Returns: { products: [...], pagination: {...}, error: null }
+ */
+export async function getProductsByCategory(categoryId, page = 1, limit = 24) {
+  if (!categoryId) {
+    return { products: [], pagination: null, error: "Category ID required" };
+  }
+  
+  const res = await fetchSafe(
+    `${BASE_URL}/products/category/${encodeURIComponent(categoryId)}?page=${page}&limit=${limit}`
+  );
+  
+  if (res.success && res.data?.results?.length) {
+    return {
+      products: res.data.results,
+      pagination: res.data.pagination || null,
+      error: null
+    };
+  }
+  
+  if (res.success && res.data?.results) {
+    return {
+      products: res.data.results,
+      pagination: res.data.pagination || null,
+      error: null
+    };
+  }
+  
+  console.warn("[API] No products found for category:", categoryId);
+  return { products: [], pagination: null, error: "No products found" };
+}
+
+/**
+ * Search products by name
+ * 
+ * Returns: { products: [...], pagination: {...}, error: null }
+ */
+export async function searchProductsByName(query, page = 1, limit = 24) {
+  if (!query || query.length < 2) {
+    return { products: [], pagination: null, error: "Search term too short" };
+  }
+  
+  const res = await fetchSafe(
+    `${BASE_URL}/products/search?q=${encodeURIComponent(query)}&page=${page}&limit=${limit}`
+  );
+  
+  if (res.success && res.data?.results?.length) {
+    return {
+      products: res.data.results,
+      pagination: res.data.pagination || null,
+      error: null
+    };
+  }
+  
+  console.warn("[API] No products found for query:", query);
+  return { products: [], pagination: null, error: "No products found" };
+}
+
+/**
+ * Get product by barcode
+ * 
+ * Returns: { product: {...}|null, error: null }
+ */
+export async function getProductByBarcodeExtended(barcode) {
+  if (!barcode || barcode.length < 8) {
+    return { product: null, error: "Invalid barcode" };
+  }
+  
+  const res = await fetchSafe(`${BASE_URL}/products/barcode/${encodeURIComponent(barcode)}`);
+  
+  if (res.success && res.data?.result) {
+    return { product: res.data.result, error: null };
+  }
+  
+  if (res.success && res.data?.product) {
+    return { product: res.data.product, error: null };
+  }
+  
+  console.warn("[API] Product not found for barcode:", barcode);
+  return { product: null, error: "Product not found" };
+}

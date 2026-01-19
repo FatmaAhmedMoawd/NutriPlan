@@ -7,7 +7,11 @@ import {
   getProductByBarcode,
   searchMeals,
   filterMealsByCategory,
-  filterMealsByArea
+  filterMealsByArea,
+  getProductCategories,
+  getProductsByCategory,
+  searchProductsByName as apiSearchProductsByName,
+  getProductByBarcodeExtended
 } from "./core/api.js";
 import { DAILY_LIMITS } from "./utils/constants.js";
 
@@ -22,6 +26,8 @@ let currentFilterCategory = null;
 let filteredMeals = [];
 let allCategories = []; // Cache categories
 let allAreas = []; // Cache areas
+let allProductCategories = []; // Cache product categories
+let currentProductCategory = null; // Track selected product category
 
 // =================== INITIALIZATION ===================
 document.addEventListener("DOMContentLoaded", async () => {
@@ -699,7 +705,7 @@ function extractYoutubeId(url) {
 }
 
 // =================== PRODUCTS PAGE ===================
-function renderProductsPage() {
+async function renderProductsPage() {
   document.getElementById("page-title").textContent = "Product Scanner";
   document.getElementById("page-subtitle").textContent = "Search for nutritional information";
   
@@ -707,6 +713,28 @@ function renderProductsPage() {
   document.getElementById("meal-categories-section").style.display = "none";
   document.getElementById("all-recipes-section").style.display = "none";
   document.getElementById("products-section").style.display = "block";
+  
+  showLoadingOverlay();
+  
+  try {
+    // Load product categories
+    const { categories, error } = await getProductCategories();
+    if (!error && categories && categories.length > 0) {
+      allProductCategories = categories;
+      renderProductCategories(categories);
+      
+      // Load first category's products by default
+      await filterProductsByCategory(categories[0].id);
+    } else {
+      console.error("Failed to load product categories:", error);
+      showNotification("Info", "Product categories not available", "info");
+    }
+  } catch (err) {
+    console.error("Error in renderProductsPage:", err);
+    showNotification("Error", "Failed to load products page", "error");
+  } finally {
+    hideLoadingOverlay();
+  }
 }
 
 async function searchProductsByName() {
@@ -720,12 +748,31 @@ async function searchProductsByName() {
   showLoadingOverlay();
 
   try {
-    const data = await searchProducts(query, 1, 24);
-    currentProducts = data.products || data || [];
-    renderProductsGrid(currentProducts);
-    document.getElementById("products-count").textContent = `Found ${currentProducts.length} products`;
+    const { products, pagination, error } = await apiSearchProductsByName(query, 1, 24);
     
-    if (currentProducts.length === 0) {
+    if (!error && products && products.length > 0) {
+      currentProducts = products;
+      currentProductCategory = null; // Reset category filter
+      renderProductsGrid(currentProducts);
+      
+      const totalText = pagination ? `Found ${pagination.total} products (showing ${products.length})` : `Found ${products.length} products`;
+      const countEl = document.getElementById("products-count");
+      if (countEl) {
+        countEl.textContent = totalText;
+      }
+      
+      // Deselect all category buttons
+      document.querySelectorAll(".product-category-btn").forEach(btn => {
+        btn.classList.remove("bg-emerald-600", "text-white");
+        btn.classList.add("bg-gray-100", "text-gray-700");
+      });
+    } else {
+      currentProducts = [];
+      renderProductsGrid([]);
+      const countEl = document.getElementById("products-count");
+      if (countEl) {
+        countEl.textContent = "No products found";
+      }
       showNotification("Info", "No products found", "info");
     }
   } catch (error) {
@@ -749,22 +796,117 @@ async function searchProductByBarcode() {
   showLoadingOverlay();
 
   try {
-    const data = await getProductByBarcode(barcode);
+    const { product, error } = await getProductByBarcodeExtended(barcode);
     
-    if (data && (data.product || data)) {
-      currentProducts = [data.product || data];
+    if (!error && product) {
+      currentProducts = [product];
+      currentProductCategory = null; // Reset category filter
       renderProductsGrid(currentProducts);
-      document.getElementById("products-count").textContent = "1 product found";
+      
+      const countEl = document.getElementById("products-count");
+      if (countEl) {
+        countEl.textContent = "1 product found";
+      }
+      
+      // Deselect all category buttons
+      document.querySelectorAll(".product-category-btn").forEach(btn => {
+        btn.classList.remove("bg-emerald-600", "text-white");
+        btn.classList.add("bg-gray-100", "text-gray-700");
+      });
     } else {
       currentProducts = [];
       renderProductsGrid([]);
+      const countEl = document.getElementById("products-count");
+      if (countEl) {
+        countEl.textContent = "Product not found";
+      }
       showNotification("Info", "Product not found", "info");
     }
   } catch (error) {
     console.error("Error looking up barcode:", error);
     currentProducts = [];
     renderProductsGrid([]);
-    showNotification("Error", "Product not found", "error");
+    showNotification("Error", "Product lookup failed", "error");
+  } finally {
+    hideLoadingOverlay();
+  }
+}
+
+/**
+ * Render product category buttons
+ */
+function renderProductCategories(categories) {
+  const container = document.getElementById("product-categories");
+  if (!container) return;
+  
+  container.innerHTML = "";
+  
+  if (!categories || categories.length === 0) {
+    container.innerHTML = "<p class='text-gray-500'>No categories available</p>";
+    return;
+  }
+  
+  // Render first 10 categories (most popular ones)
+  categories.slice(0, 10).forEach(category => {
+    const btn = document.createElement("button");
+    btn.className = `product-category-btn px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium whitespace-nowrap hover:bg-emerald-100 hover:text-emerald-700 transition-all`;
+    btn.textContent = category.name;
+    btn.dataset.categoryId = category.id;
+    btn.addEventListener("click", () => {
+      filterProductsByCategory(category.id, category.name);
+    });
+    container.appendChild(btn);
+  });
+}
+
+/**
+ * Filter products by selected category
+ */
+async function filterProductsByCategory(categoryId, categoryName = "") {
+  if (!categoryId) return;
+  
+  showLoadingOverlay();
+  
+  try {
+    currentProductCategory = categoryId;
+    
+    // Update active button state
+    document.querySelectorAll(".product-category-btn").forEach(btn => {
+      btn.classList.remove("bg-emerald-600", "text-white");
+      btn.classList.add("bg-gray-100", "text-gray-700");
+      
+      if (btn.dataset.categoryId === categoryId) {
+        btn.classList.remove("bg-gray-100", "text-gray-700");
+        btn.classList.add("bg-emerald-600", "text-white");
+      }
+    });
+    
+    // Fetch products by category
+    const { products, pagination, error } = await getProductsByCategory(categoryId, 1, 24);
+    
+    if (!error && products && products.length > 0) {
+      currentProducts = products;
+      renderProductsGrid(currentProducts);
+      
+      const totalText = pagination ? `Showing ${products.length} of ${pagination.total} products` : `Found ${products.length} products`;
+      const countEl = document.getElementById("products-count");
+      if (countEl) {
+        countEl.textContent = totalText;
+      }
+    } else {
+      currentProducts = [];
+      renderProductsGrid([]);
+      const countEl = document.getElementById("products-count");
+      if (countEl) {
+        countEl.textContent = "No products found";
+      }
+      showNotification("Info", `No products found in ${categoryName || "this category"}`, "info");
+    }
+  } catch (err) {
+    console.error("Error filtering products:", err);
+    currentProducts = [];
+    renderProductsGrid([]);
+    showNotification("Error", "Failed to filter products", "error");
   } finally {
     hideLoadingOverlay();
   }
@@ -790,24 +932,47 @@ function renderProductsGrid(products) {
     if (!product) return;
     
     const card = document.createElement("div");
-    card.className = "bg-white rounded-xl shadow-md hover:shadow-xl transition-all overflow-hidden";
+    card.className = "bg-white rounded-xl shadow-md hover:shadow-xl transition-all overflow-hidden cursor-pointer";
+    
+    // Get nutrition grade with fallback
+    const grade = product.nutritionGrade || product.nutri_score || "unknown";
+    const gradeColor = getNutriScoreColor(grade);
+    
     card.innerHTML = `
-      <img src="${product.image_url || product.strMealThumb || "https://via.placeholder.com/200"}" alt="${product.name}" class="w-full h-40 object-cover">
+      <img src="${product.image || product.image_url || "https://via.placeholder.com/200"}" alt="${product.name}" class="w-full h-40 object-cover">
       <div class="p-4">
-        <h3 class="font-bold text-gray-900 mb-1 truncate">${product.name}</h3>
+        <h3 class="font-bold text-gray-900 mb-1 truncate">${product.name || "Unknown Product"}</h3>
         <p class="text-sm text-gray-500 mb-2">${product.brand || "Unknown Brand"}</p>
+        
         <div class="flex items-center justify-between mb-3">
-          <span class="text-lg font-bold text-emerald-600">${product.calories || "N/A"} cal</span>
-          ${product.nutri_score ? `<span class="px-2 py-1 rounded font-bold text-white" style="background-color: ${getNutriScoreColor(product.nutri_score)}">${product.nutri_score.toUpperCase()}</span>` : ""}
+          <span class="text-lg font-bold text-emerald-600">${product.nutrients?.calories || product.calories || 0} cal</span>
+          ${grade && grade !== "unknown" ? `<span class="px-2 py-1 rounded font-bold text-white" style="background-color: ${gradeColor}">${grade.toUpperCase()}</span>` : ""}
         </div>
+        
+        <div class="grid grid-cols-3 gap-2 mb-3 text-xs">
+          <div class="bg-gray-50 p-2 rounded">
+            <p class="text-gray-500">Protein</p>
+            <p class="font-bold text-gray-900">${product.nutrients?.protein || 0}g</p>
+          </div>
+          <div class="bg-gray-50 p-2 rounded">
+            <p class="text-gray-500">Carbs</p>
+            <p class="font-bold text-gray-900">${product.nutrients?.carbs || 0}g</p>
+          </div>
+          <div class="bg-gray-50 p-2 rounded">
+            <p class="text-gray-500">Fat</p>
+            <p class="font-bold text-gray-900">${product.nutrients?.fat || 0}g</p>
+          </div>
+        </div>
+        
         <button class="add-product-btn w-full bg-emerald-600 text-white py-2 rounded-lg font-semibold hover:bg-emerald-700 transition-all" data-product='${JSON.stringify(product)}'>
-          Add to Log
+          <i class="fa-solid fa-plus mr-2"></i>Add to Log
         </button>
       </div>
     `;
     
     card.querySelector(".add-product-btn").addEventListener("click", (e) => {
-      const prod = JSON.parse(e.target.dataset.product);
+      e.stopPropagation();
+      const prod = JSON.parse(e.currentTarget.dataset.product);
       addProductToFoodLog(prod);
     });
     
@@ -976,14 +1141,17 @@ function addMealToFoodLog(meal) {
 function addProductToFoodLog(product) {
   if (!product) return;
   
+  // Handle nested nutrients object from API
+  const nutrients = product.nutrients || {};
+  
   foodLog.push({
-    id: `product_${product.id || Date.now()}`,
+    id: `product_${product.barcode || product.id || Date.now()}`,
     name: product.name,
     type: "product",
-    calories: product.calories || 0,
-    protein: product.protein || 0,
-    carbs: product.carbs || 0,
-    fats: product.fats || 0,
+    calories: nutrients.calories || product.calories || 0,
+    protein: nutrients.protein || product.protein || 0,
+    carbs: nutrients.carbs || product.carbs || 0,
+    fats: nutrients.fat || product.fats || product.fat || 0,
     timestamp: new Date().toISOString()
   });
   
