@@ -28,6 +28,7 @@ let allCategories = []; // Cache categories
 let allAreas = []; // Cache areas
 let allProductCategories = []; // Cache product categories
 let currentProductCategory = null; // Track selected product category
+let currentProductDetail = null; // Track currently viewed product detail
 
 // =================== INITIALIZATION ===================
 document.addEventListener("DOMContentLoaded", async () => {
@@ -932,7 +933,8 @@ function renderProductsGrid(products) {
     if (!product) return;
     
     const card = document.createElement("div");
-    card.className = "bg-white rounded-xl shadow-md hover:shadow-xl transition-all overflow-hidden cursor-pointer";
+    card.className = "bg-white rounded-xl shadow-md hover:shadow-xl transition-all overflow-hidden cursor-pointer product-card-clickable";
+    card.dataset.productId = product.barcode || product.id;
     
     // Get nutrition grade with fallback
     const grade = product.nutritionGrade || product.nutri_score || "unknown";
@@ -970,6 +972,14 @@ function renderProductsGrid(products) {
       </div>
     `;
     
+    // Card click to open modal
+    card.addEventListener("click", (e) => {
+      // Don't open modal if clicking the button
+      if (!e.target.closest(".add-product-btn")) {
+        showProductModal(product);
+      }
+    });
+    
     card.querySelector(".add-product-btn").addEventListener("click", (e) => {
       e.stopPropagation();
       const prod = JSON.parse(e.currentTarget.dataset.product);
@@ -990,6 +1000,223 @@ function getNutriScoreColor(grade) {
   };
   return colors[grade?.toLowerCase()] || "#6b7280";
 }
+
+/**
+ * Show product detail modal
+ */
+function showProductModal(product) {
+  if (!product) return;
+  
+  currentProductDetail = product;
+  
+  const overlay = document.getElementById("product-modal-overlay");
+  const modal = document.getElementById("product-modal");
+  
+  if (!overlay || !modal) return;
+  
+  // Get nutrition data with fallbacks
+  const nutrients = product.nutrients || {};
+  const grade = product.nutritionGrade || product.nutri_score || "unknown";
+  const gradeColor = getNutriScoreColor(grade);
+  const gradeNames = {
+    a: "Excellent",
+    b: "Good",
+    c: "Fair",
+    d: "Poor",
+    e: "Very Poor",
+    unknown: "Unknown"
+  };
+  
+  const novaGroups = {
+    1: "Unprocessed",
+    2: "Processed",
+    3: "Ultra-processed",
+    4: "Ultra-processed"
+  };
+  
+  const novaColor = {
+    1: "#10b981",
+    2: "#f59e0b",
+    3: "#ef4444",
+    4: "#dc2626"
+  };
+  
+  modal.innerHTML = `
+    <div class="p-6">
+      <!-- Header -->
+      <div class="flex items-start gap-6 mb-6">
+        <div class="w-32 h-32 bg-gray-100 rounded-xl flex items-center justify-center overflow-hidden flex-shrink-0">
+          <img src="${product.image || "https://via.placeholder.com/200"}" alt="${product.name}" class="w-full h-full object-contain">
+        </div>
+        <div class="flex-1">
+          <p class="text-sm text-emerald-600 font-semibold mb-1">${product.brand || "Unknown Brand"}</p>
+          <h2 class="text-2xl font-bold text-gray-900 mb-2">${product.name || "Unknown Product"}</h2>
+          <p class="text-sm text-gray-500 mb-3">${product.size || "N/A"}</p>
+          
+          <div class="flex items-center gap-3">
+            ${grade && grade !== "unknown" ? `
+              <div class="flex items-center gap-2 px-3 py-1.5 rounded-lg" style="background-color: ${gradeColor}20">
+                <span class="w-8 h-8 rounded flex items-center justify-center text-white font-bold" style="background-color: ${gradeColor}">
+                  ${grade.toUpperCase()}
+                </span>
+                <div>
+                  <p class="text-xs font-bold" style="color: ${gradeColor}">Nutri-Score</p>
+                  <p class="text-[10px] text-gray-600">${gradeNames[grade.toLowerCase()] || "Unknown"}</p>
+                </div>
+              </div>
+            ` : ""}
+            
+            ${product.novaGroup ? `
+              <div class="flex items-center gap-2 px-3 py-1.5 rounded-lg" style="background-color: ${novaColor[product.novaGroup]}20">
+                <span class="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold" style="background-color: ${novaColor[product.novaGroup]}">
+                  ${product.novaGroup}
+                </span>
+                <div>
+                  <p class="text-xs font-bold" style="color: ${novaColor[product.novaGroup]}">NOVA</p>
+                  <p class="text-[10px] text-gray-600">${novaGroups[product.novaGroup] || "Unknown"}</p>
+                </div>
+              </div>
+            ` : ""}
+          </div>
+        </div>
+        <button class="close-product-modal text-gray-400 hover:text-gray-600 text-2xl">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+      
+      <!-- Nutrition Facts -->
+      <div class="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-xl p-5 mb-6 border border-emerald-200">
+        <h3 class="font-bold text-gray-900 mb-4 flex items-center gap-2">
+          <i class="fa-solid fa-chart-pie text-emerald-600"></i>
+          Nutrition Facts <span class="text-sm font-normal text-gray-500">(per 100g)</span>
+        </h3>
+        
+        <div class="text-center mb-4 pb-4 border-b border-emerald-200">
+          <p class="text-4xl font-bold text-gray-900">${nutrients.calories || 0}</p>
+          <p class="text-sm text-gray-500">Calories</p>
+        </div>
+        
+        <div class="grid grid-cols-4 gap-4">
+          <div class="text-center">
+            <div class="w-full bg-gray-200 rounded-full h-2 mb-2">
+              <div class="bg-emerald-500 h-2 rounded-full" style="width: ${Math.min((((nutrients.protein || 0) / 100) * 100), 100)}%"></div>
+            </div>
+            <p class="text-lg font-bold text-emerald-600">${nutrients.protein || 0}g</p>
+            <p class="text-xs text-gray-500">Protein</p>
+          </div>
+          <div class="text-center">
+            <div class="w-full bg-gray-200 rounded-full h-2 mb-2">
+              <div class="bg-blue-500 h-2 rounded-full" style="width: ${Math.min((((nutrients.carbs || 0) / 100) * 100), 100)}%"></div>
+            </div>
+            <p class="text-lg font-bold text-blue-600">${nutrients.carbs || 0}g</p>
+            <p class="text-xs text-gray-500">Carbs</p>
+          </div>
+          <div class="text-center">
+            <div class="w-full bg-gray-200 rounded-full h-2 mb-2">
+              <div class="bg-purple-500 h-2 rounded-full" style="width: ${Math.min((((nutrients.fat || 0) / 100) * 100), 100)}%"></div>
+            </div>
+            <p class="text-lg font-bold text-purple-600">${nutrients.fat || 0}g</p>
+            <p class="text-xs text-gray-500">Fat</p>
+          </div>
+          <div class="text-center">
+            <div class="w-full bg-gray-200 rounded-full h-2 mb-2">
+              <div class="bg-orange-500 h-2 rounded-full" style="width: ${Math.min((((nutrients.sugar || 0) / 100) * 100), 100)}%"></div>
+            </div>
+            <p class="text-lg font-bold text-orange-600">${nutrients.sugar || 0}g</p>
+            <p class="text-xs text-gray-500">Sugar</p>
+          </div>
+        </div>
+        
+        <div class="grid grid-cols-3 gap-4 mt-4 pt-4 border-t border-emerald-200">
+          <div class="text-center">
+            <p class="text-sm font-semibold text-gray-900">${nutrients.saturated_fat || 0}g</p>
+            <p class="text-xs text-gray-500">Saturated Fat</p>
+          </div>
+          <div class="text-center">
+            <p class="text-sm font-semibold text-gray-900">${nutrients.fiber || 0}g</p>
+            <p class="text-xs text-gray-500">Fiber</p>
+          </div>
+          <div class="text-center">
+            <p class="text-sm font-semibold text-gray-900">${nutrients.sodium || 0}g</p>
+            <p class="text-xs text-gray-500">Salt</p>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Ingredients -->
+      ${product.ingredients ? `
+        <div class="bg-gray-50 rounded-xl p-5 mb-6">
+          <h3 class="font-bold text-gray-900 mb-3 flex items-center gap-2">
+            <i class="fa-solid fa-list text-gray-600"></i>
+            Ingredients
+          </h3>
+          <p class="text-sm text-gray-600 leading-relaxed">${product.ingredients}</p>
+        </div>
+      ` : ""}
+      
+      <!-- Allergens -->
+      ${product.allergens ? `
+        <div class="bg-red-50 rounded-xl p-5 mb-6 border border-red-200">
+          <h3 class="font-bold text-red-700 mb-2 flex items-center gap-2">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+            Allergens
+          </h3>
+          <p class="text-sm text-red-600">${product.allergens}</p>
+        </div>
+      ` : ""}
+      
+      <!-- Actions -->
+      <div class="flex gap-3">
+        <button class="add-product-to-log flex-1 py-3 bg-emerald-600 text-white rounded-xl font-semibold hover:bg-emerald-700 transition-all">
+          <i class="fa-solid fa-plus mr-2"></i>Log This Food
+        </button>
+        <button class="close-product-modal flex-1 py-3 bg-gray-100 text-gray-700 rounded-xl font-semibold hover:bg-gray-200 transition-all">
+          Close
+        </button>
+      </div>
+    </div>
+  `;
+  
+  // Show modal
+  overlay.classList.remove("hidden");
+  
+  // Add event listeners
+  const closeButtons = modal.querySelectorAll(".close-product-modal");
+  closeButtons.forEach(btn => {
+    btn.addEventListener("click", closeProductModal);
+  });
+  
+  const logButton = modal.querySelector(".add-product-to-log");
+  if (logButton) {
+    logButton.addEventListener("click", () => {
+      addProductToFoodLog(product);
+      closeProductModal();
+    });
+  }
+}
+
+/**
+ * Close product detail modal
+ */
+function closeProductModal() {
+  const overlay = document.getElementById("product-modal-overlay");
+  if (overlay) {
+    overlay.classList.add("hidden");
+  }
+  currentProductDetail = null;
+}
+
+// Close modal when clicking overlay
+document.addEventListener("DOMContentLoaded", () => {
+  const overlay = document.getElementById("product-modal-overlay");
+  if (overlay) {
+    overlay.addEventListener("click", (e) => {
+      if (e.target === overlay) {
+        closeProductModal();
+      }
+    });
+  }
+});
 
 // =================== FOOD LOG ===================
 function renderFoodLogPage() {
