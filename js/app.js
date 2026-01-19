@@ -933,57 +933,76 @@ function renderProductsGrid(products) {
     if (!product) return;
     
     const card = document.createElement("div");
-    card.className = "bg-white rounded-xl shadow-md hover:shadow-xl transition-all overflow-hidden cursor-pointer product-card-clickable";
-    card.dataset.productId = product.barcode || product.id;
+    card.className = "product-card bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition-all cursor-pointer group";
+    card.dataset.barcode = product.barcode || product.id;
     
     // Get nutrition grade with fallback
     const grade = product.nutritionGrade || product.nutri_score || "unknown";
     const gradeColor = getNutriScoreColor(grade);
+    const novaGroup = product.novaGroup || null;
+    const nutrients = product.nutrients || {};
     
     card.innerHTML = `
-      <img src="${product.image || product.image_url || "https://via.placeholder.com/200"}" alt="${product.name}" class="w-full h-40 object-cover">
-      <div class="p-4">
-        <h3 class="font-bold text-gray-900 mb-1 truncate">${product.name || "Unknown Product"}</h3>
-        <p class="text-sm text-gray-500 mb-2">${product.brand || "Unknown Brand"}</p>
+<div class="product-card bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition-all cursor-pointer group" data-barcode="${product.barcode || ''}">
+    <div class="relative h-40 bg-gray-100 flex items-center justify-center overflow-hidden">
+        <img 
+          class="w-full h-full object-contain group-hover:scale-110 transition-transform duration-300" 
+          src="${product.image || 'https://via.placeholder.com/200'}" 
+          alt="${product.name || 'Unknown Product'}" 
+          loading="lazy"
+          onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\'w-16 h-16 bg-gray-200 rounded-xl flex items-center justify-center\'><i class=\'fa-solid fa-box text-gray-400 text-2xl\'></i></div>'">
         
-        <div class="flex items-center justify-between mb-3">
-          <span class="text-lg font-bold text-emerald-600">${product.nutrients?.calories || product.calories || 0} cal</span>
-          ${grade && grade !== "unknown" ? `<span class="px-2 py-1 rounded font-bold text-white" style="background-color: ${gradeColor}">${grade.toUpperCase()}</span>` : ""}
+        <!-- Nutri-Score Badge -->
+        ${grade && grade !== 'unknown' ? `
+        <div class="absolute top-2 left-2 text-white text-xs font-bold px-2 py-1 rounded uppercase" style="background-color: ${gradeColor}">
+            Nutri-Score ${grade.toUpperCase()}
+        </div>` : ''}
+        
+        <!-- NOVA Badge -->
+        ${novaGroup ? `
+        <div class="absolute top-2 right-2 text-white text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center" style="background-color: ${novaGroup === 1 ? '#10b981' : novaGroup === 2 ? '#f59e0b' : '#ef4444'}" title="NOVA ${novaGroup}">
+            ${novaGroup}
+        </div>` : ''}
+    </div>
+    
+    <div class="p-4">
+        <p class="text-xs text-emerald-600 font-semibold mb-1 truncate">${product.brand || 'Unknown Brand'}</p>
+        <h3 class="font-bold text-gray-900 mb-2 line-clamp-2 group-hover:text-emerald-600 transition-colors">
+            ${product.name || 'Unknown Product'}
+        </h3>
+        
+        <div class="flex items-center gap-3 text-xs text-gray-500 mb-3">
+            <span><i class="fa-solid fa-weight-scale mr-1"></i>${product.size || 'N/A'}</span>
+            <span><i class="fa-solid fa-fire mr-1"></i>${nutrients.calories || 0} kcal/100g</span>
         </div>
         
-        <div class="grid grid-cols-3 gap-2 mb-3 text-xs">
-          <div class="bg-gray-50 p-2 rounded">
-            <p class="text-gray-500">Protein</p>
-            <p class="font-bold text-gray-900">${product.nutrients?.protein || 0}g</p>
-          </div>
-          <div class="bg-gray-50 p-2 rounded">
-            <p class="text-gray-500">Carbs</p>
-            <p class="font-bold text-gray-900">${product.nutrients?.carbs || 0}g</p>
-          </div>
-          <div class="bg-gray-50 p-2 rounded">
-            <p class="text-gray-500">Fat</p>
-            <p class="font-bold text-gray-900">${product.nutrients?.fat || 0}g</p>
-          </div>
+        <!-- Mini Nutrition -->
+        <div class="grid grid-cols-4 gap-1 text-center">
+            <div class="bg-emerald-50 rounded p-1.5">
+                <p class="text-xs font-bold text-emerald-700">${nutrients.protein || 0}g</p>
+                <p class="text-[10px] text-gray-500">Protein</p>
+            </div>
+            <div class="bg-blue-50 rounded p-1.5">
+                <p class="text-xs font-bold text-blue-700">${nutrients.carbs || 0}g</p>
+                <p class="text-[10px] text-gray-500">Carbs</p>
+            </div>
+            <div class="bg-purple-50 rounded p-1.5">
+                <p class="text-xs font-bold text-purple-700">${nutrients.fat || 0}g</p>
+                <p class="text-[10px] text-gray-500">Fat</p>
+            </div>
+            <div class="bg-orange-50 rounded p-1.5">
+                <p class="text-xs font-bold text-orange-700">${nutrients.sugar || 0}g</p>
+                <p class="text-[10px] text-gray-500">Sugar</p>
+            </div>
         </div>
-        
-        <button class="add-product-btn w-full bg-emerald-600 text-white py-2 rounded-lg font-semibold hover:bg-emerald-700 transition-all" data-product='${JSON.stringify(product)}'>
-          <i class="fa-solid fa-plus mr-2"></i>Add to Log
-        </button>
-      </div>
+    </div>
+</div>
+
     `;
     
     // Card click to open modal
     card.addEventListener("click", (e) => {
-      // Don't open modal if clicking the button
-      if (!e.target.closest(".add-product-btn")) {
-        showProductModal(product);
-      }
-    });
-    
-    card.querySelector(".add-product-btn").addEventListener("click", (e) => {
-      e.stopPropagation();
-      const prod = JSON.parse(e.currentTarget.dataset.product);
-      addProductToFoodLog(prod);
+      showProductModal(product);
     });
     
     container.appendChild(card);
